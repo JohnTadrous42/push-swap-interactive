@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Push Swap Web Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* Neon UI Elements */
+        .neon-text-cyan {
+            text-shadow: 0 0 5px #06b6d4, 0 0 10px #06b6d4;
+        }
+        .neon-text-pink {
+            text-shadow: 0 0 5px #ec4899, 0 0 10px #ec4899;
+        }
+
+        .btn-op {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid #334155;
+            transition: all 0.15s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-op:hover {
+            border-color: #06b6d4;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+            transform: translateY(-2px);
+        }
+        .btn-op:active {
+            transform: translateY(1px);
+        }
+
+        .stack-container {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border-bottom: 4px solid #334155;
+            border-radius: 8px 8px 4px 4px;
+        }
+
+        .block-item {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            border-radius: 4px;
+            margin-bottom: 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .block-a {
+            background: linear-gradient(90deg, #0284c7 0%, #06b6d4 100%);
+            border: 1px solid #22d3ee;
+        }
+
+        .block-b {
+            background: linear-gradient(90deg, #be185d 0%, #ec4899 100%);
+            border: 1px solid #f472b6;
+        }
+
+        /* Tooltip */
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            background-color: #1e293b;
+            color: #94a3b8;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            width: max-content;
+            border: 1px solid #334155;
+            pointer-events: none;
+        }
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Overlay */
+        #victory-overlay {
+            backdrop-filter: blur(5px);
+        }
+
+        /* Shake animation for funny reactions */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .shake-anim {
+            animation: shake 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-extrabold tracking-wider"><span class="text-cyan-400 neon-text-cyan">PUSH</span>_<span class="text-pink-400 neon-text-pink">SWAP</span></h1>
+            <div class="flex items-center gap-3 mt-1">
+                <p class="text-slate-400 text-sm">Sort Stack A ascending (smallest on top)</p>
+                <button onclick="toggleInstructions()" class="bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 hover:bg-cyan-500/40 text-xs px-2 py-1 rounded transition-colors font-bold tracking-wider">HOW TO PLAY</button>
+            </div>
+        </div>
+        <div class="flex gap-6 bg-slate-800/80 px-6 py-3 rounded-xl border border-slate-700 shadow-lg">
+            <div class="text-center">
+                <p class="text-slate-400 text-xs uppercase tracking-widest">Level</p>
+                <p id="level-display" class="text-2xl font-bold text-white">1</p>
+            </div>
+            <div class="w-px bg-slate-600"></div>
+            <div class="text-center">
+                <p class="text-slate-400 text-xs uppercase tracking-widest">Moves</p>
+                <p id="moves-display" class="text-2xl font-bold text-cyan-400">0</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Game Area -->
+    <main class="w-full max-w-4xl flex flex-col md:flex-row gap-8">
+
+        <!-- Stacks Display -->
+        <div class="flex-1 flex gap-4 md:gap-8 justify-center">
+            <!-- Stack A -->
+            <div class="flex flex-col w-1/2 max-w-[200px]">
+                <h2 class="text-center mb-2 font-bold text-cyan-400 tracking-widest text-lg">STACK A</h2>
+                <div id="stack-a-container" class="stack-container h-80 sm:h-96 w-full flex flex-col justify-end p-2 relative">
+                    <!-- Blocks injected here -->
+                </div>
+            </div>
+
+            <!-- Stack B -->
+            <div class="flex flex-col w-1/2 max-w-[200px]">
+                <h2 class="text-center mb-2 font-bold text-pink-400 tracking-widest text-lg">STACK B</h2>
+                <div id="stack-b-container" class="stack-container h-80 sm:h-96 w-full flex flex-col justify-end p-2 relative">
+                    <!-- Blocks injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="w-full md:w-80 flex flex-col justify-center bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700 shadow-xl">
+            <h3 class="text-center text-slate-300 mb-4 font-bold tracking-widest border-b border-slate-600 pb-2">OPERATIONS</h3>
+
+            <div class="grid grid-cols-3 gap-3">
+                <!-- Swap -->
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-cyan-200" onclick="executeOp('sa')">
+                    sa
+                    <span class="tooltip-text">Swap first 2 elements of A</span>
+                </button>
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-pink-200" onclick="executeOp('sb')">
+                    sb
+                    <span class="tooltip-text">Swap first 2 elements of B</span>
+                </button>
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-purple-300" onclick="executeOp('ss')">
+                    ss
+                    <span class="tooltip-text">sa and sb simultaneously</span>
+                </button>
+
+                <!-- Push -->
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-cyan-200" onclick="executeOp('pa')">
+                    pa
+                    <span class="tooltip-text">Push top of B onto A</span>
+                </button>
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-pink-200" onclick="executeOp('pb')">
+                    pb
+                    <span class="tooltip-text">Push top of A onto B</span>
+                </button>
+                <div class="opacity-20 pointer-events-none"></div> <!-- Empty slot for grid balance -->
+
+                <!-- Rotate -->
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-cyan-200" onclick="executeOp('ra')">
+                    ra
+                    <span class="tooltip-text">Rotate A up (top becomes bottom)</span>
+                </button>
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-pink-200" onclick="executeOp('rb')">
+                    rb
+                    <span class="tooltip-text">Rotate B up (top becomes bottom)</span>
+                </button>
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-purple-300" onclick="executeOp('rr')">
+                    rr
+                    <span class="tooltip-text">ra and rb simultaneously</span>
+                </button>
+
+                <!-- Reverse Rotate -->
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-cyan-200" onclick="executeOp('rra')">
+                    rra
+                    <span class="tooltip-text">Reverse rotate A (bottom becomes top)</span>
+                </button>
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-pink-200" onclick="executeOp('rrb')">
+                    rrb
+                    <span class="tooltip-text">Reverse rotate B (bottom becomes top)</span>
+                </button>
+                <button class="btn-op tooltip py-3 rounded text-sm font-bold text-purple-300" onclick="executeOp('rrr')">
+                    rrr
+                    <span class="tooltip-text">rra and rrb simultaneously</span>
+                </button>
+            </div>
+
+            <!-- History -->
+            <div class="mt-6 flex-1 min-h-[120px] max-h-[150px] flex flex-col">
+                <h4 class="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Move History</h4>
+                <div id="move-history" class="flex-1 bg-slate-900 rounded p-2 overflow-y-auto text-xs text-slate-500 font-mono break-words flex flex-wrap content-start gap-1 border border-slate-700">
+                </div>
+            </div>
+
+            <button onclick="manualRestart()" class="mt-4 py-2 w-full border border-red-500/50 hover:bg-red-500/20 text-red-400 transition-colors rounded font-bold text-sm tracking-widest">
+                RESTART LEVEL ↺
+            </button>
+        </div>
+    </main>
+
+    <!-- Evaluation Overlay -->
+    <div id="victory-overlay" class="fixed inset-0 bg-black/80 hidden flex-col items-center justify-center z-50">
+        <div id="modal-card" class="bg-slate-800 border border-cyan-500 p-8 rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.3)] text-center max-w-md w-full mx-4 transform scale-95 transition-transform duration-300">
+            <h2 id="overlay-title" class="text-3xl font-extrabold text-white mb-2 uppercase tracking-wider">LEVEL COMPLETE</h2>
+
+            <div id="rating-badge" class="inline-block px-4 py-2 rounded font-bold mb-6 tracking-widest shadow-lg text-sm">
+                RATING BADGE
+            </div>
+
+            <p id="victory-message" class="text-sm font-bold mb-4 text-slate-300 whitespace-pre-line min-h-[40px] flex items-center justify-center"></p>
+
+            <div class="bg-slate-900 border border-slate-700 rounded-lg p-4 mb-6 text-left font-mono text-sm space-y-2">
+                <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+                    <span class="text-slate-400">Stack Size (n):</span>
+                    <span id="eval-n" class="text-white font-bold text-lg">0</span>
+                </div>
+                <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+                    <span class="text-slate-400">Your Moves:</span>
+                    <span id="eval-moves" class="text-cyan-400 font-bold text-2xl">0</span>
+                </div>
+
+                <div class="pt-2 text-xs">
+                    <div id="limit-nlogn" class="flex justify-between text-slate-400">
+                        <span>O(n log n) Target:</span>
+                        <span></span>
+                    </div>
+                    <div id="limit-nsqrtn" class="flex justify-between text-slate-400 mt-1">
+                        <span>O(n√n) Target:</span>
+                        <span></span>
+                    </div>
+                    <div id="limit-n2" class="flex justify-between text-slate-400 mt-1">
+                        <span>O(n²) Target:</span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Action Buttons -->
+            <div id="overlay-actions" class="space-y-3">
+                <button id="overlay-btn" onclick="nextLevel()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-105 active:scale-95 text-lg tracking-widest">
+                    NEXT LEVEL ➔
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions Overlay -->
+    <div id="instructions-overlay" class="fixed inset-0 bg-black/80 hidden flex-col items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 border border-cyan-500 p-6 md:p-8 rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.3)] max-w-2xl w-full max-h-[90vh] overflow-y-auto transform transition-transform duration-300">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-4">
+                <h2 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500 tracking-wider">HOW TO PLAY</h2>
+                <button onclick="toggleInstructions()" class="text-slate-400 hover:text-white text-3xl font-bold leading-none">&times;</button>
+            </div>
+
+            <div class="space-y-4 text-slate-300 text-sm md:text-base">
+                <p><strong>Goal:</strong> Sort <span class="text-cyan-400 font-bold">Stack A</span> in ascending order (smallest number on top). <span class="text-pink-400 font-bold">Stack B</span> must be empty.</p>
+                <p><strong>Evaluation:</strong> Your efficiency is analyzed against standard algorithms (O(n²), O(n√n), and O(n log n)). Try to solve it in the minimum amount of moves to achieve the highest algorithmic rating!</p>
+
+                <h3 class="text-lg font-bold text-white mt-6 border-b border-slate-600 pb-2">Operations Explained</h3>
+                <ul class="space-y-3 mt-2">
+                    <li><strong class="text-cyan-300 inline-block w-24">sa / sb / ss:</strong> <span class="font-bold text-white">(Swap)</span> Swap the first 2 elements at the top of the stack. Does nothing if there is only 1 or no elements. <em>(sa = Stack A, sb = Stack B, ss = Both)</em></li>
+                    <li><strong class="text-cyan-300 inline-block w-24">pa / pb:</strong> <span class="font-bold text-white">(Push)</span> Take the first element at the top of one stack and put it at the top of the other. Does nothing if the source stack is empty. <em>(pa = push to A, pb = push to B)</em></li>
+                    <li><strong class="text-cyan-300 inline-block w-24">ra / rb / rr:</strong> <span class="font-bold text-white">(Rotate)</span> Shift up all elements of the stack by 1. The top element becomes the bottom element. <em>(ra = Stack A, rb = Stack B, rr = Both)</em></li>
+                    <li><strong class="text-cyan-300 inline-block w-24">rra / rrb / rrr:</strong> <span class="font-bold text-white">(Rev. Rotate)</span> Shift down all elements of the stack by 1. The bottom element becomes the top element. <em>(rra = Stack A, rrb = Stack B, rrr = Both)</em></li>
+                </ul>
+            </div>
+
+            <button onclick="toggleInstructions()" class="mt-8 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl border border-slate-500 transition-colors tracking-widest">
+                GOT IT, LET'S PLAY!
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let stackA = [];
+        let stackB = [];
+        let initialStack = [];
+        let currentLevel = 1;
+        let moves = 0;
+        let isWon = false;
+        let moveHistory = [];
+        let insultIndex = 0;
+
+        // Base numbers count for Level 1, increases by 1 each level
+        const baseNumbers = 3;
+
+        // DOM Elements
+        const elStackA = document.getElementById('stack-a-container');
+        const elStackB = document.getElementById('stack-b-container');
+        const elMoves = document.getElementById('moves-display');
+        const elLevel = document.getElementById('level-display');
+        const elOverlay = document.getElementById('victory-overlay');
+        const elInstructions = document.getElementById('instructions-overlay');
+        const elMoveHistory = document.getElementById('move-history');
+
+        // Initialization
+        function initLevel(level, isRetry = false) {
+            currentLevel = level;
+            moves = 0;
+            isWon = false;
+            insultIndex = 0;
+            stackB = [];
+
+            if (!isRetry) {
+                // Generate distinct random numbers
+                const numCount = baseNumbers + (level - 1);
+                let pool = [];
+
+                // We use numbers from 1 to numCount * 3 to give gaps
+                while(pool.length < numCount) {
+                    let r = Math.floor(Math.random() * (numCount * 3)) + 1;
+                    if(pool.indexOf(r) === -1) pool.push(r);
+                }
+
+                // Make sure it's not already sorted
+                const sortedPool = [...pool].sort((a,b) => a - b);
+                let isAlreadySorted = true;
+                for(let i=0; i<pool.length; i++){
+                    if(pool[i] !== sortedPool[i]) isAlreadySorted = false;
+                }
+                if(isAlreadySorted) {
+                    // simple swap to unsort
+                    let temp = pool[0];
+                    pool[0] = pool[pool.length-1];
+                    pool[pool.length-1] = temp;
+                }
+                initialStack = pool;
+            }
+
+            stackA = [...initialStack];
+            moveHistory = [];
+            elMoveHistory.innerHTML = '';
+
+            updateUI();
+            elOverlay.classList.remove('flex');
+            elOverlay.classList.add('hidden');
+        }
+
+        // Render Stacks to DOM
+        function renderStack(stackArray, containerEl, isStackA) {
+            containerEl.innerHTML = '';
+
+            const allNums = [...initialStack];
+            const maxVal = Math.max(...allNums, 1);
+
+            const totalElements = initialStack.length;
+            const containerHeight = containerEl.clientHeight || 320;
+
+            const marginSpace = totalElements * 2;
+            const availableHeight = containerHeight - marginSpace;
+
+            const dynamicHeight = Math.min(40, availableHeight / totalElements);
+            const dynamicFontSize = Math.max(10, dynamicHeight * 0.45);
+
+            for (let i = 0; i < stackArray.length; i++) {
+                const val = stackArray[i];
+                const div = document.createElement('div');
+                div.innerText = val;
+
+                const minWidth = 15;
+                const widthPercent = Math.max(minWidth, (val / maxVal) * 100);
+
+                div.className = `block-item ${isStackA ? 'block-a' : 'block-b'}`;
+                div.style.width = `${widthPercent}%`;
+                div.style.height = `${dynamicHeight}px`;
+                div.style.minHeight = '4px';
+                div.style.fontSize = `${dynamicFontSize}px`;
+
+                containerEl.appendChild(div);
+            }
+        }
+
+        function updateUI() {
+            renderStack(stackA, elStackA, true);
+            renderStack(stackB, elStackB, false);
+            elMoves.innerText = moves;
+            elLevel.innerText = currentLevel;
+        }
+
+        function incrementMoves() {
+            moves++;
+            updateUI();
+            checkWinCondition();
+        }
+
+        // --- OPERATIONS LOGIC ---
+
+        function sa() {
+            if (stackA.length >= 2) {
+                let temp = stackA[0];
+                stackA[0] = stackA[1];
+                stackA[1] = temp;
+                return true;
+            }
+            return false;
+        }
+
+        function sb() {
+            if (stackB.length >= 2) {
+                let temp = stackB[0];
+                stackB[0] = stackB[1];
+                stackB[1] = temp;
+                return true;
+            }
+            return false;
+        }
+
+        function pa() {
+            if (stackB.length > 0) {
+                stackA.unshift(stackB.shift());
+                return true;
+            }
+            return false;
+        }
+
+        function pb() {
+            if (stackA.length > 0) {
+                stackB.unshift(stackA.shift());
+                return true;
+            }
+            return false;
+        }
+
+        function ra() {
+            if (stackA.length > 1) {
+                stackA.push(stackA.shift());
+                return true;
+            }
+            return false;
+        }
+
+        function rb() {
+            if (stackB.length > 1) {
+                stackB.push(stackB.shift());
+                return true;
+            }
+            return false;
+        }
+
+        function rra() {
+            if (stackA.length > 1) {
+                stackA.unshift(stackA.pop());
+                return true;
+            }
+            return false;
+        }
+
+        function rrb() {
+            if (stackB.length > 1) {
+                stackB.unshift(stackB.pop());
+                return true;
+            }
+            return false;
+        }
+
+        // Execution router
+        function executeOp(op) {
+            if (isWon) return;
+
+            let moved = false;
+
+            switch(op) {
+                case 'sa': moved = sa(); break;
+                case 'sb': moved = sb(); break;
+                case 'ss':
+                    let s1 = sa(); let s2 = sb();
+                    moved = s1 || s2;
+                    break;
+                case 'pa': moved = pa(); break;
+                case 'pb': moved = pb(); break;
+                case 'ra': moved = ra(); break;
+                case 'rb': moved = rb(); break;
+                case 'rr':
+                    let r1 = ra(); let r2 = rb();
+                    moved = r1 || r2;
+                    break;
+                case 'rra': moved = rra(); break;
+                case 'rrb': moved = rrb(); break;
+                case 'rrr':
+                    let rr1 = rra(); let rr2 = rrb();
+                    moved = rr1 || rr2;
+                    break;
+            }
+
+            if (moved) {
+                moveHistory.push(op);
+                incrementMoves();
+
+                const span = document.createElement('span');
+                span.className = 'bg-slate-800 text-cyan-300 px-1.5 py-0.5 rounded border border-slate-700';
+                span.innerText = op;
+                elMoveHistory.appendChild(span);
+                elMoveHistory.scrollTop = elMoveHistory.scrollHeight;
+            }
+        }
+
+        // Win Logic
+        function isSorted(arr) {
+            for (let i = 0; i < arr.length - 1; i++) {
+                if (arr[i] > arr[i + 1]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function checkWinCondition() {
+            if (stackB.length === 0 && stackA.length > 0 && isSorted(stackA)) {
+                isWon = true;
+                setTimeout(showEvaluation, 300);
+            }
+        }
+
+        function evaluateAlgorithm(n, m) {
+            const oN2 = Math.ceil(n * n);
+            const oNSqrtN = Math.ceil(n * Math.sqrt(n));
+            const oNLogN = Math.ceil(n * Math.log2(n));
+
+            let result = {
+                badgeClass: "",
+                badgeText: "",
+                title: "",
+                message: "",
+                passed: true,
+                oN2: oN2,
+                oNSqrtN: oNSqrtN,
+                oNLogN: oNLogN
+            };
+
+            if (m < oNLogN) {
+                result.badgeClass = "bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]";
+                result.badgeText = "BEYOND O(n log n) 👑";
+                result.title = "LEGENDARY!";
+                result.message = "You beat the complex algorithms! Absolute perfection.";
+            } else if (m <= oNLogN + Math.floor(n * 0.2)) {
+                result.badgeClass = "bg-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.5)]";
+                result.badgeText = "COMPLEX ALGORITHM (O(n log n)) 🧠";
+                result.title = "EXCELLENT!";
+                result.message = "Performance matches Radix/Merge Sort efficiency.";
+            } else if (m <= oNSqrtN) {
+                result.badgeClass = "bg-yellow-500 text-slate-900 shadow-[0_0_15px_rgba(234,179,8,0.5)]";
+                result.badgeText = "MEDIUM ALGORITHM (O(n√n)) ⚡";
+                result.title = "GOOD JOB!";
+                result.message = "Performance matches Chunk-based sorting.";
+            } else if (m <= oN2) {
+                result.badgeClass = "bg-pink-500 text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]";
+                result.badgeText = "SIMPLE ALGORITHM (O(n²)) 🐢";
+                result.title = "ACCEPTABLE.";
+                result.message = "Performance matches Selection Sort efficiency.";
+            } else {
+                result.badgeClass = "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]";
+                result.badgeText = "INEFFICIENT (> O(n²)) 🐌";
+                result.title = "TOO MANY MOVES!";
+                result.message = "Your moves exceed the standard algorithms.\nYou have two options:";
+                result.passed = false;
+            }
+
+            return result;
+        }
+
+        function showEvaluation() {
+            const n = initialStack.length;
+            const evalResult = evaluateAlgorithm(n, moves);
+            insultIndex = 0;
+
+            document.getElementById('overlay-title').innerText = evalResult.title;
+
+            const badge = document.getElementById('rating-badge');
+            badge.innerText = evalResult.badgeText;
+            badge.className = `inline-block px-4 py-2 rounded font-bold mb-6 tracking-widest text-sm ${evalResult.badgeClass}`;
+
+            const msgEl = document.getElementById('victory-message');
+            msgEl.innerText = evalResult.message;
+            msgEl.className = "text-sm font-bold mb-4 text-slate-300 whitespace-pre-line min-h-[40px] flex items-center justify-center";
+
+            document.getElementById('eval-n').innerText = n;
+            document.getElementById('eval-moves').innerText = moves;
+
+            // Populate targets
+            const elNLogN = document.getElementById('limit-nlogn');
+            const elNSqrtN = document.getElementById('limit-nsqrtn');
+            const elN2 = document.getElementById('limit-n2');
+
+            elNLogN.querySelector('span:last-child').innerText = `≤ ${evalResult.oNLogN}`;
+            elNSqrtN.querySelector('span:last-child').innerText = `≤ ${evalResult.oNSqrtN}`;
+            elN2.querySelector('span:last-child').innerText = `≤ ${evalResult.oN2}`;
+
+            // Highlight attained level metrics
+            elNLogN.className = `flex justify-between mt-1 ${moves <= evalResult.oNLogN ? 'text-green-400 font-bold' : 'text-slate-500'}`;
+            elNSqrtN.className = `flex justify-between mt-1 ${(moves > evalResult.oNLogN && moves <= evalResult.oNSqrtN) ? 'text-yellow-400 font-bold' : 'text-slate-500'}`;
+            elN2.className = `flex justify-between mt-1 ${(moves > evalResult.oNSqrtN && moves <= evalResult.oN2) ? 'text-pink-400 font-bold' : 'text-slate-500'}`;
+
+            // Render Action Buttons
+            const actionsContainer = document.getElementById('overlay-actions');
+            if (evalResult.passed) {
+                actionsContainer.innerHTML = `
+                    <button onclick="nextLevel()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-105 active:scale-95 text-lg tracking-widest">
+                        NEXT LEVEL ➔
+                    </button>
+                `;
+            } else {
+                actionsContainer.innerHTML = `
+                    <button id="insult-btn" onclick="handleInsult()" class="w-full bg-slate-900/80 hover:bg-red-500/20 border border-red-500/70 text-white font-bold py-3.5 rounded-xl transition text-base tracking-widest uppercase">
+                        1. DUCK PushSwap 🦆
+                    </button>
+                    <button onclick="retryLevel()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3.5 rounded-xl shadow-lg transform transition hover:scale-105 active:scale-95 text-base tracking-widest uppercase">
+                        2. TRY AGAIN
+                    </button>
+                `;
+            }
+
+            elOverlay.classList.remove('hidden');
+            elOverlay.classList.add('flex');
+            const dialog = document.getElementById('modal-card');
+            dialog.classList.remove('scale-95');
+            dialog.classList.add('scale-100');
+        }
+
+        function handleInsult() {
+            const funnyMessages = [
+                "Why?! What did I even do?! 😭",
+                `Really?! You're the one who took ${moves} moves!`,
+                "Excuse me?! Don't blame me for your O(n!) algorithm 💀",
+                "Wow. Rude. Moulinette would give you -42 for that.",
+                "Are you done venting? Click 2. TRY AGAIN already!",
+                "I'm literally just HTML and JavaScript, bro. Why so mean?",
+                "Nope! Still not letting you pass. Hit TRY AGAIN! 😤"
+            ];
+
+            const msgEl = document.getElementById('victory-message');
+            const cardEl = document.getElementById('modal-card');
+
+            msgEl.innerText = funnyMessages[insultIndex % funnyMessages.length];
+            msgEl.className = "text-sm font-bold mb-4 text-pink-400 neon-text-pink whitespace-pre-line min-h-[40px] flex items-center justify-center";
+
+            // Trigger shake animation on the modal card
+            cardEl.classList.remove('shake-anim');
+            void cardEl.offsetWidth; // trigger reflow
+            cardEl.classList.add('shake-anim');
+
+            insultIndex++;
+        }
+
+        function nextLevel() {
+            initLevel(currentLevel + 1);
+        }
+
+        function retryLevel() {
+            initLevel(currentLevel, true);
+        }
+
+        function manualRestart() {
+            initLevel(currentLevel, true);
+        }
+
+        function toggleInstructions() {
+            if (elInstructions.classList.contains('hidden')) {
+                elInstructions.classList.remove('hidden');
+                elInstructions.classList.add('flex');
+            } else {
+                elInstructions.classList.add('hidden');
+                elInstructions.classList.remove('flex');
+            }
+        }
+
+        // Start game on load and handle window resize for dynamic stack height rendering
+        window.onload = () => {
+            initLevel(1);
+            window.addEventListener('resize', updateUI);
+        };
+
+    </script>
+</body>
+</html>
