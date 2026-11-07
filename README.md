@@ -10,18 +10,18 @@ Built as a personal side-project through **vibe coding** (AI-augmented rapid pro
 While preparing to tackle `push_swap` during my studies at **42 Prague**, I didn't want to jump straight into doubly linked lists and pointer manipulation in C without seeing the bigger algorithmic picture first.
 
 I decided to build my own visual sandbox where I could:
-1. **Play the game manually** to feel how numbers flow between `Stack A` and `Stack B`[cite: 1].
-2. **Test sorting algorithms** (like Turk sort, Chunk sort, or Radix) step-by-step on small and medium stacks[cite: 1, 2].
+1. **Play the game manually** to feel how numbers flow between `Stack A` and `Stack B`.
+2. **Test sorting algorithms** (like Turk sort, Chunk sort, or Radix) step-by-step on small and medium stacks.
 3. **Experiment and discover new patterns** on my own for minimizing instruction counts.
 
 ---
 
 ## ✨ Features
-- **Full Operation Set:** Interactive controls with tooltips for `sa`, `sb`, `ss`, `pa`, `pb`, `ra`, `rb`, `rr`, `rra`, `rrb`, and `rrr`[cite: 1].
-- **Real-Time Move History:** Tracks every operation executed in sequence[cite: 1].
-- **Algorithmic Complexity Evaluator:** Automatically benchmarks your move count at the end of each level against theoretical sorting complexities ($O(n \log n)$, $O(n\sqrt{n})$, and $O(n^2)$)[cite: 1].
-- **Built-in Frustration Button:** Because sometimes your manual sorting goes way over the limit[cite: 1] *(Stay away from the duck 🦆)*.
-- **Zero Dependencies:** Pure HTML, Tailwind CSS (CDN), and Vanilla JavaScript in a single portable file[cite: 1].
+- **Full Operation Set:** Interactive controls with tooltips for `sa`, `sb`, `ss`, `pa`, `pb`, `ra`, `rb`, `rr`, `rra`, `rrb`, and `rrr`.
+- **Real-Time Move History:** Tracks every operation executed in sequence.
+- **Algorithmic Complexity Evaluator:** Automatically benchmarks your move count at the end of each level against theoretical sorting complexities ($O(n \log n)$, $O(n\sqrt{n})$, and $O(n^2)$).
+- **Built-in Frustration Button:** Because sometimes your manual sorting goes way over the limit *(Stay away from the duck 🦆)*.
+- **Zero Dependencies:** Pure HTML, Tailwind CSS (CDN), and Vanilla JavaScript in a single portable file.
 
 ---
 
